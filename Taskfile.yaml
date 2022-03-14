@@ -1,0 +1,7 @@
+version: "3"
+
+tasks:
+  build:
+    desc: Build the app
+    cmds:
+    - go build -mod=mod -o bin/cph main.go

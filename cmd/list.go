@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -13,13 +14,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List AWS CodePipelines you have access to",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("list called")
-		listPipelines()
+		name, _ := cmd.Flags().GetString("name")
+
+		if name != "" {
+			listPipelines(name)
+		} else {
+			listPipelines("")
+		}
 	},
 }
 
@@ -30,7 +35,7 @@ func init() {
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// listCmd.PersistentFlags().String("foo", "", "A help for foo")
+	listCmd.PersistentFlags().String("name", "", "Use a name or part of a name to filter the results.")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
@@ -43,7 +48,7 @@ type pipelineExecSummary struct {
 }
 
 // List all pipelines TODO: return error
-func listPipelines() {
+func listPipelines(searchTerm string) {
 	sess, err := session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable, // Must be set to enable
 		Profile:           os.Getenv("AWS_PROFILE"),
@@ -57,7 +62,7 @@ func listPipelines() {
 
 	// List all pipelines
 	params := &codepipeline.ListPipelinesInput{
-		MaxResults: aws.Int64(5),
+		MaxResults: aws.Int64(300),
 	}
 	result, err := cp.ListPipelines(params)
 	if err != nil {
@@ -68,7 +73,13 @@ func listPipelines() {
 	// Iterate over pipelines and create a slice of names
 	var pipeline_names []string
 	for _, p := range result.Pipelines {
-		pipeline_names = append(pipeline_names, *p.Name)
+		if searchTerm != "" {
+			if strings.Contains(*p.Name, searchTerm) {
+				pipeline_names = append(pipeline_names, *p.Name)
+			}
+		} else {
+			pipeline_names = append(pipeline_names, *p.Name)
+		}
 	}
 
 	// Iterate over pipeline names and get the most recent pipeline
