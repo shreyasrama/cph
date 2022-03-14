@@ -1,4 +1,4 @@
-# cpvt
-CodePipeline Viewer Tool
+# cph
+CodePipeline Helper
 
 ## Description
