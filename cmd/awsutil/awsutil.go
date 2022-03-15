@@ -52,8 +52,30 @@ func GetPipelineNames(client *codepipeline.CodePipeline, searchTerm string) []st
 	return pipeline_names
 }
 
+// Given a pipeline name, run that pipeline
 func RunPipeline(client *codepipeline.CodePipeline, pipelineName string) string {
-	return ""
+	// Start pipeline execution
+	params := &codepipeline.StartPipelineExecutionInput{
+		Name: aws.String(pipelineName),
+	}
+	result, err := client.StartPipelineExecution(params)
+	if err != nil {
+		fmt.Println("Error starting pipeline execution: ", err)
+	}
+
+	return *result.PipelineExecutionId
+}
+
+// Given pipeline names, run those pipelines
+func RunPipelines(client *codepipeline.CodePipeline, pipelineNames []string) map[string]string {
+	// Start pipeline execution
+	m := make(map[string]string)
+	for _, p := range pipelineNames {
+		executionId := RunPipeline(client, p)
+		m[executionId] = p
+	}
+
+	return m
 }
 
 // Given a pipeline name, return the stage that was last executed
@@ -72,15 +94,17 @@ func GetLastExecutedStage(client *codepipeline.CodePipeline, pipelineName string
 	var stage string
 	lastStatusChange := time.Date(1970, time.Month(1), 1, 1, 1, 1, 1, time.UTC)
 	for _, p := range result.StageStates {
-		if *p.ActionStates[0].LatestExecution.Status == "InProgress" {
-			return *p.StageName
-		} else if *p.ActionStates[0].LatestExecution.Status == "Failed" {
-			return *p.StageName
-		} else {
-			currentStatusChange := *p.ActionStates[0].LatestExecution.LastStatusChange
-			if currentStatusChange.After(lastStatusChange) {
-				lastStatusChange = currentStatusChange
-				stage = *p.StageName
+		if p.ActionStates[0].LatestExecution != nil {
+			if *p.ActionStates[0].LatestExecution.Status == "InProgress" {
+				return *p.StageName
+			} else if *p.ActionStates[0].LatestExecution.Status == "Failed" {
+				return *p.StageName
+			} else {
+				currentStatusChange := *p.ActionStates[0].LatestExecution.LastStatusChange
+				if currentStatusChange.After(lastStatusChange) {
+					lastStatusChange = currentStatusChange
+					stage = *p.StageName
+				}
 			}
 		}
 	}

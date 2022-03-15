@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/shreyasrama/cph/cmd/awsutil"
 
@@ -59,16 +61,24 @@ Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
 	fmt.Scan(&s)
 	// Check if number is entered
 	if i, err := strconv.Atoi(s); err == nil {
-		fmt.Printf("Entered: %s, retrieved %s", s, pipeline_map[i])
-		// run pipeline command
+		executionId := awsutil.RunPipeline(cp, pipeline_map[i])
+		fmt.Printf("Started execution of %s. Execution ID: %s", pipeline_map[i], executionId)
 	} else if strings.EqualFold(s, "yes") {
-		// iterate and run all pipelines
-		fmt.Printf("You said yes")
+		fmt.Println("Running pipelines...")
+		executionIds := awsutil.RunPipelines(cp, pipeline_names)
+
+		w := tabwriter.NewWriter(os.Stdout, 1, 1, 4, ' ', 0)
+		fmt.Fprintln(w, "\nPipeline\tExecution ID\t")
+		for id, name := range executionIds {
+			fmt.Fprintf(w, "%s\t%s\n", name, id)
+		}
+		w.Flush()
 	} else if strings.EqualFold(s, "no") {
 		fmt.Println("Cancelled.")
 		// exit?
 	} else {
-		fmt.Printf("Input not recognised.")
+		fmt.Println("Input not recognised.")
+		// exit?
 	}
 
 	return nil
