@@ -3,14 +3,12 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 	"text/tabwriter"
 	"time"
 
 	"github.com/shreyasrama/cph/cmd/awsutil"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/codepipeline"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -54,42 +52,20 @@ type pipelineExecSummary struct {
 // 1. ListPipelines
 // 2. ListPipelineExecutions
 // 3. GetPipelineState
-func listPipelines(searchTerm string) {
-	sess, err := session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable, // Must be set to enable
-		Profile:           os.Getenv("AWS_PROFILE"),
-	})
+func listPipelines(searchTerm string) error {
+	cp, err := awsutil.CreateCodePipelineSession()
 	if err != nil {
-		fmt.Println("error:", err)
-		os.Exit(1)
+		return err
 	}
 
-	cp := codepipeline.New(sess)
-
-	// List all pipelines
-	params := &codepipeline.ListPipelinesInput{
-		MaxResults: aws.Int64(300),
-	}
-	result, err := cp.ListPipelines(params)
+	pipeline_names, err := awsutil.GetPipelineNames(cp, searchTerm)
 	if err != nil {
-		fmt.Println("Error listing pipelines: ", err)
-		os.Exit(1)
-	}
-
-	// Iterate over pipelines and create a slice of names
-	var pipeline_names []string
-	for _, p := range result.Pipelines {
-		if searchTerm != "" {
-			if strings.Contains(*p.Name, searchTerm) {
-				pipeline_names = append(pipeline_names, *p.Name)
-			}
-		} else {
-			pipeline_names = append(pipeline_names, *p.Name)
-		}
+		return err
 	}
 
 	// Iterate over pipeline names and get the most recent pipeline
 	// execution status and create a slice of structs
+	// TODO: maybe make this a util function
 	var pipeline_status []pipelineExecSummary
 	for _, name := range pipeline_names {
 		params := &codepipeline.ListPipelineExecutionsInput{
@@ -99,7 +75,7 @@ func listPipelines(searchTerm string) {
 		result, err := cp.ListPipelineExecutions(params)
 		if err != nil {
 			fmt.Println("Error listing pipeline executions: ", err)
-			os.Exit(1)
+			return err
 		}
 		pipeline_status = append(pipeline_status, pipelineExecSummary{PipelineName: name, PipelineExecSummary: *result.PipelineExecutionSummaries[0]})
 	}
@@ -112,17 +88,23 @@ func listPipelines(searchTerm string) {
 		loc, err := time.LoadLocation("Local")
 		if err != nil {
 			fmt.Println("Error loading timezone data: ", err)
-			os.Exit(1)
+			return err
 		}
 		date := pipeline.PipelineExecSummary.LastUpdateTime.In(loc).Format("Jan 02 2006 15:04:05")
+		stage, err := awsutil.GetLastExecutedStage(cp, pipeline.PipelineName)
+		if err != nil {
+			return err
+		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t",
 			pipeline.PipelineName,
-			getStatusColor(pipeline.PipelineExecSummary, awsutil.GetLastExecutedStage(cp, pipeline.PipelineName)),
+			getStatusColor(pipeline.PipelineExecSummary, stage),
 			date,
 		)
 		fmt.Fprintln(w)
 	}
 	w.Flush()
+
+	return nil
 }
 
 func getStatusColor(pes codepipeline.PipelineExecutionSummary, stage string) string {

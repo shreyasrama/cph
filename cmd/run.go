@@ -42,9 +42,15 @@ func init() {
 }
 
 func runPipelines(searchTerm string) error {
-	cp := awsutil.CreateCodePipelineSession()
+	cp, err := awsutil.CreateCodePipelineSession()
+	if err != nil {
+		return err
+	}
 
-	pipeline_names := awsutil.GetPipelineNames(cp, searchTerm)
+	pipeline_names, err := awsutil.GetPipelineNames(cp, searchTerm)
+	if err != nil {
+		return err
+	}
 
 	// Print and confirm pipelines to be run
 	pipeline_map := make(map[int]string)
@@ -61,11 +67,17 @@ Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
 	fmt.Scan(&s)
 	// Check if number is entered
 	if i, err := strconv.Atoi(s); err == nil {
-		executionId := awsutil.RunPipeline(cp, pipeline_map[i])
+		executionId, err := awsutil.RunPipeline(cp, pipeline_map[i])
+		if err != nil {
+			return err
+		}
 		fmt.Printf("Started execution of %s. Execution ID: %s", pipeline_map[i], executionId)
 	} else if strings.EqualFold(s, "yes") {
 		fmt.Println("Running pipelines...")
-		executionIds := awsutil.RunPipelines(cp, pipeline_names)
+		executionIds, err := awsutil.RunPipelines(cp, pipeline_names)
+		if err != nil {
+			return err
+		}
 
 		w := tabwriter.NewWriter(os.Stdout, 1, 1, 4, ' ', 0)
 		fmt.Fprintln(w, "\nPipeline\tExecution ID\t")
