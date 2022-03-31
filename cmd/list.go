@@ -8,7 +8,6 @@ import (
 
 	"github.com/shreyasrama/cph/cmd/awsutil"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/codepipeline"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -47,7 +46,7 @@ type pipelineExecSummary struct {
 	PipelineExecSummary codepipeline.PipelineExecutionSummary
 }
 
-// List all pipelines TODO: return error, refactor
+// List all pipelines
 // Makes the following calls to CodePipeline:
 // 1. ListPipelines
 // 2. ListPipelineExecutions
@@ -65,19 +64,13 @@ func listPipelines(searchTerm string) error {
 
 	// Iterate over pipeline names and get the most recent pipeline
 	// execution status and create a slice of structs
-	// TODO: maybe make this a util function
 	var pipeline_status []pipelineExecSummary
 	for _, name := range pipeline_names {
-		params := &codepipeline.ListPipelineExecutionsInput{
-			MaxResults:   aws.Int64(1),
-			PipelineName: aws.String(name),
-		}
-		result, err := cp.ListPipelineExecutions(params)
+		latestExecution, err := awsutil.GetLatestPipelineExecution(cp, name)
 		if err != nil {
-			fmt.Println("Error listing pipeline executions: ", err)
 			return err
 		}
-		pipeline_status = append(pipeline_status, pipelineExecSummary{PipelineName: name, PipelineExecSummary: *result.PipelineExecutionSummaries[0]})
+		pipeline_status = append(pipeline_status, pipelineExecSummary{PipelineName: name, PipelineExecSummary: latestExecution})
 	}
 
 	// Print output in readable format

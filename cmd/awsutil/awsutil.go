@@ -11,6 +11,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/codepipeline"
 )
 
+type pipelineExecSummary struct {
+	PipelineName        string
+	PipelineExecSummary codepipeline.PipelineExecutionSummary
+}
+
 // Create an AWS Session with a Code Pipeline client
 func CreateCodePipelineSession() (*codepipeline.CodePipeline, error) {
 	sess, err := session.NewSessionWithOptions(session.Options{
@@ -114,4 +119,19 @@ func GetLastExecutedStage(client *codepipeline.CodePipeline, pipelineName string
 	}
 
 	return stage, nil
+}
+
+func GetLatestPipelineExecution(client *codepipeline.CodePipeline, pipelineName string) (codepipeline.PipelineExecutionSummary, error) {
+	// Get one (the latest) pipeline execution
+	params := &codepipeline.ListPipelineExecutionsInput{
+		MaxResults:   aws.Int64(1),
+		PipelineName: aws.String(pipelineName),
+	}
+	result, err := client.ListPipelineExecutions(params)
+	if err != nil {
+		fmt.Println("Error listing pipeline executions: ", err)
+		return codepipeline.PipelineExecutionSummary{}, err
+	}
+
+	return *result.PipelineExecutionSummaries[0], nil
 }

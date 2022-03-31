@@ -25,10 +25,11 @@ cph run --name pipeline_name
     `bin/cph`
 
 ## Todo
-- Proper error handling everywhere (clean up os.exits too) -- underway
-- Refactor list.go to use awsutil functions -- underway
+- ~Proper error handling everywhere (clean up os.exits too)~
+- ~Refactor list.go to use awsutil functions~
+- Accept selection of multiple pipelines -- underway
 - Testing framework
 - Sorting out function and variable case
-- Several more functions (not in order of importance): get approvals and multi approve, select multiple pipelines to run based on comma separated lists, detailed view of a single pipeline
+- Several more functions (not in order of importance): get approvals and multi approve, detailed view of a single pipeline
 - Setting up releases in Github and releasing via Taskfile
 - Use https://github.com/olekukonko/tablewriter instead of tabwriter
