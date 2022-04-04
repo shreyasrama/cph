@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sort"
+	"sync"
 	"text/tabwriter"
 	"time"
 
@@ -64,14 +66,29 @@ func listPipelines(searchTerm string) error {
 
 	// Iterate over pipeline names and get the most recent pipeline
 	// execution status and create a slice of structs
+	var errs []error
+	wg := sync.WaitGroup{}
 	var pipeline_status []pipelineExecSummary
 	for _, name := range pipeline_names {
-		latestExecution, err := awsutil.GetLatestPipelineExecution(cp, name)
-		if err != nil {
-			return err
-		}
-		pipeline_status = append(pipeline_status, pipelineExecSummary{PipelineName: name, PipelineExecSummary: latestExecution})
+		name := name
+		wg.Add(1)
+		go func() {
+			latestExecution, err := awsutil.GetLatestPipelineExecution(cp, name)
+			if err != nil {
+				errs = append(errs, err)
+			}
+			pipeline_status = append(pipeline_status, pipelineExecSummary{PipelineName: name, PipelineExecSummary: latestExecution})
+			wg.Done()
+		}()
 	}
+	wg.Wait()
+	if len(errs) != 0 {
+		return fmt.Errorf("Got errors getting latest pipeline executions: %v", errs)
+	}
+	// Sort by pipeline name
+	sort.SliceStable(pipeline_status, func(i, j int) bool {
+		return pipeline_status[i].PipelineName < pipeline_status[j].PipelineName
+	})
 
 	// Print output in readable format
 	// TODO: replace with https://github.com/olekukonko/tablewriter to use colours better and fix formatting
