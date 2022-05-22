@@ -16,6 +16,13 @@ type pipelineExecSummary struct {
 	PipelineExecSummary codepipeline.PipelineExecutionSummary
 }
 
+type StageInfo struct {
+	ActionName string
+	StageName  string
+	Status     string
+	Token      *string
+}
+
 // Create an AWS Session with a Code Pipeline client
 func CreateCodePipelineSession() (*codepipeline.CodePipeline, error) {
 	sess, err := session.NewSessionWithOptions(session.Options{
@@ -88,7 +95,7 @@ func RunPipelines(client *codepipeline.CodePipeline, pipelineNames []string) (ma
 }
 
 // Given a pipeline name, return the stage that was last executed
-func GetLastExecutedStage(client *codepipeline.CodePipeline, pipelineName string) (string, error) {
+func GetLastExecutedStage(client *codepipeline.CodePipeline, pipelineName string) (StageInfo, error) {
 	// Get the pipeline state
 	params := &codepipeline.GetPipelineStateInput{
 		Name: aws.String(pipelineName),
@@ -100,25 +107,34 @@ func GetLastExecutedStage(client *codepipeline.CodePipeline, pipelineName string
 
 	// Iterate over pipeline stage states.
 	// InProgress or Failed means that the pipeline is currently at that given stage.
-	var stage string
+	var stageInfo StageInfo
 	lastStatusChange := time.Date(1970, time.Month(1), 1, 1, 1, 1, 1, time.UTC)
 	for _, p := range result.StageStates {
 		if p.ActionStates[0].LatestExecution != nil {
-			if *p.ActionStates[0].LatestExecution.Status == "InProgress" {
-				return *p.StageName, nil
-			} else if *p.ActionStates[0].LatestExecution.Status == "Failed" {
-				return *p.StageName, nil
-			} else {
+			switch *p.ActionStates[0].LatestExecution.Status {
+			case "InProgress", "Failed":
+				return StageInfo{
+					*p.ActionStates[0].ActionName,
+					*p.StageName,
+					*p.ActionStates[0].LatestExecution.Status,
+					p.ActionStates[0].LatestExecution.Token,
+				}, nil
+			default:
 				currentStatusChange := *p.ActionStates[0].LatestExecution.LastStatusChange
 				if currentStatusChange.After(lastStatusChange) {
 					lastStatusChange = currentStatusChange
-					stage = *p.StageName
+					stageInfo = StageInfo{
+						*p.ActionStates[0].ActionName,
+						*p.StageName,
+						*p.ActionStates[0].LatestExecution.Status,
+						p.ActionStates[0].LatestExecution.Token,
+					}
 				}
 			}
 		}
 	}
 
-	return stage, nil
+	return stageInfo, nil
 }
 
 func GetLatestPipelineExecution(client *codepipeline.CodePipeline, pipelineName string) (codepipeline.PipelineExecutionSummary, error) {
@@ -134,4 +150,25 @@ func GetLatestPipelineExecution(client *codepipeline.CodePipeline, pipelineName 
 	}
 
 	return *result.PipelineExecutionSummaries[0], nil
+}
+
+func ApprovePipelines(client *codepipeline.CodePipeline, stagesToApprove map[string]StageInfo) error {
+	for name, info := range stagesToApprove {
+		_, err := client.PutApprovalResult(&codepipeline.PutApprovalResultInput{
+			ActionName: &info.ActionName,
+			PipelineName: &name,
+			Result: &codepipeline.ApprovalResult{
+				Status: aws.String(codepipeline.ApprovalStatusApproved),
+				Summary: aws.String("Approved"),
+			},
+			StageName: &info.StageName,
+			Token: info.Token,
+		})
+
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	return nil
 }
