@@ -94,7 +94,7 @@ Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
 			return err
 		}
 
-		for _, name := range pipeline_names {
+		for name := range stagesToApprove {
 			fmt.Printf("Approved %s\n", name)
 		}
 	} else if strings.EqualFold(s, "no") {
