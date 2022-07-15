@@ -13,7 +13,7 @@ import (
 // approveCmd represents the approve command
 var approveCmd = &cobra.Command{
 	Use:   "approve",
-	Short: "CodePipelines based on a provided search term.",
+	Short: "Approve CodePipelines based on a provided search term.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
@@ -63,13 +63,18 @@ func approvePipelines(searchTerm string) error {
 		}
 	}
 
+	if len(stagesToApprove) == 0 {
+		fmt.Println("No pipelines to approve.")
+		return nil
+	}
+
 	// Print and confirm pipelines to be approved
 	pipeline_map := make(map[int]string)
 	fmt.Printf("\n%s\n", "The following pipelines have been found:")
 	i := 0
 	for pipeline := range stagesToApprove {
-		pipeline_map[i] = pipeline
-		fmt.Printf("    [%v] %s\n", i, pipeline)
+		pipeline_map[i+1] = pipeline
+		fmt.Printf("    [%v] %s (%s)\n", i+1, pipeline, stagesToApprove[pipeline].StageName)
 		i++
 	}
 	var s string
@@ -86,7 +91,7 @@ Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Approved %s\n", pipeline_map[i])
+		fmt.Printf("Approved %s\n", pipeline_map[i]) //
 	} else if strings.EqualFold(s, "yes") {
 		fmt.Println("Running pipelines...")
 		err := awsutil.ApprovePipelines(cp, stagesToApprove)

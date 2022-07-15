@@ -8,6 +8,9 @@ cph list --name pipeline_name
 
 # Run pipelines using a search term
 cph run --name pipeline_name
+
+## Approve pipelines using a search term
+cph approve --name pipeline_name
 ```
 
 ## Installation/Development
