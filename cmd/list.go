@@ -84,13 +84,13 @@ func listPipelines(searchTerm string) error {
 			return err
 		}
 		date := pipeline.PipelineExecSummary.LastUpdateTime.In(loc).Format("Jan 02 2006 15:04:05")
-		stage, err := awsutil.GetLastExecutedStage(cp, pipeline.PipelineName)
+		stageInfo, err := awsutil.GetLastExecutedStage(cp, pipeline.PipelineName)
 		if err != nil {
 			return err
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t",
 			pipeline.PipelineName,
-			getStatusColor(pipeline.PipelineExecSummary, stage),
+			getStatusColor(pipeline.PipelineExecSummary, stageInfo.StageName),
 			date,
 		)
 		fmt.Fprintln(w)
