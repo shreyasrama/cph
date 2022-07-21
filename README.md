@@ -27,6 +27,9 @@ cph approve --name pipeline_name
 
     `bin/cph`
 
+### Taskfile
+Task (https://taskfile.dev/) is a simple build tool used to help automate some tasks with `cph`.
+
 ## Todo
 - ~Proper error handling everywhere (clean up os.exits too)~
 - ~Refactor list.go to use awsutil functions~

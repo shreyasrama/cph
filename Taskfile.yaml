@@ -2,6 +2,14 @@ version: "3"
 
 tasks:
   build:
-    desc: Build the app
+    desc: Build the code and output a binary in a local folder
     cmds:
     - go build -mod=mod -o bin/cph main.go
+  snapshot:
+    desc: Uses goreleaser to create a snapshot of artifacts - doesn't upload artifacts anywhere
+    cmds:
+    - goreleaser release --snapshot --skip-publish --rm-dist
+  release:
+    desc: Uses goreleaser to release and upload artifacts
+    cmds:
+    - goreleaser release --rm-dist
