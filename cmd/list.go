@@ -2,11 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"time"
 
-	"github.com/olekukonko/tablewriter"
-	"github.com/shreyasrama/cph/cmd/awsutil"
+	"github.com/shreyasrama/cph/pkg/awsutil"
+	"github.com/shreyasrama/cph/pkg/tablewriter"
 
 	"github.com/aws/aws-sdk-go/service/codepipeline"
 	"github.com/fatih/color"
@@ -74,7 +73,7 @@ func listPipelines(searchTerm string) error {
 	}
 
 	// Print output in readable format
-	table := setupTable([]string{"Name", "Latest State", "Last Update", "Revision"})
+	table := tablewriter.SetupTable([]string{"Name", "Latest State", "Last Update", "Revision"})
 
 	for _, pipeline := range pipeline_status {
 		loc, err := time.LoadLocation("Local")
@@ -121,22 +120,4 @@ func getStatusColor(pes codepipeline.PipelineExecutionSummary, stage string) str
 	default:
 		return *pes.Status
 	}
-}
-
-func setupTable(header []string) *tablewriter.Table {
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader(header)
-	table.SetAutoWrapText(false)
-	table.SetAutoFormatHeaders(true)
-	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetCenterSeparator("")
-	table.SetColumnSeparator("")
-	table.SetRowSeparator("")
-	table.SetHeaderLine(false)
-	table.SetBorder(false)
-	table.SetTablePadding("\t") // pad with tabs
-	table.SetNoWhiteSpace(true)
-
-	return table
 }

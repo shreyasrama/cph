@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shreyasrama/cph/cmd/awsutil"
+	"github.com/shreyasrama/cph/pkg/awsutil"
 
 	"github.com/spf13/cobra"
 )

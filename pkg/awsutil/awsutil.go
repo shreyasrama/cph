@@ -164,9 +164,8 @@ func ApprovePipelines(client *codepipeline.CodePipeline, stagesToApprove map[str
 			StageName: &info.StageName,
 			Token:     info.Token,
 		})
-
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Error putting approval result: ", err)
 		}
 	}
 
