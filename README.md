@@ -31,11 +31,11 @@ cph approve --name pipeline_name
 Task (https://taskfile.dev/) is a simple build tool used to help automate some tasks with `cph`.
 
 ## Todo
-- ~Proper error handling everywhere (clean up os.exits too)~
-- ~Refactor list.go to use awsutil functions~
+- ~~Proper error handling everywhere (clean up os.exits too)~~ `done`
+- ~~Refactor list.go to use awsutil functions~~ `done`
 - Accept selection of multiple pipelines -- underway
 - Testing framework
 - Sorting out function and variable case
 - Several more functions (not in order of importance): get approvals and multi approve, detailed view of a single pipeline
-- Setting up releases in Github and releasing via Taskfile
-- Use https://github.com/olekukonko/tablewriter instead of tabwriter
+- ~~Setting up releases in Github and releasing via Taskfile~~ `done`
+- ~~Use https://github.com/olekukonko/tablewriter instead of tabwriter~~ `done`

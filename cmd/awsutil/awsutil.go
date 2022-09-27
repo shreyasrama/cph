@@ -155,14 +155,14 @@ func GetLatestPipelineExecution(client *codepipeline.CodePipeline, pipelineName 
 func ApprovePipelines(client *codepipeline.CodePipeline, stagesToApprove map[string]StageInfo) error {
 	for name, info := range stagesToApprove {
 		_, err := client.PutApprovalResult(&codepipeline.PutApprovalResultInput{
-			ActionName: &info.ActionName,
+			ActionName:   &info.ActionName,
 			PipelineName: &name,
 			Result: &codepipeline.ApprovalResult{
-				Status: aws.String(codepipeline.ApprovalStatusApproved),
+				Status:  aws.String(codepipeline.ApprovalStatusApproved),
 				Summary: aws.String("Approved"),
 			},
 			StageName: &info.StageName,
-			Token: info.Token,
+			Token:     info.Token,
 		})
 
 		if err != nil {
