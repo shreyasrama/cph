@@ -2,12 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 
-	"github.com/shreyasrama/cph/cmd/awsutil"
+	"github.com/shreyasrama/cph/pkg/awsutil"
+	"github.com/shreyasrama/cph/pkg/tablewriter"
 
 	"github.com/spf13/cobra"
 )
@@ -79,12 +78,15 @@ Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
 			return err
 		}
 
-		w := tabwriter.NewWriter(os.Stdout, 1, 1, 4, ' ', 0)
-		fmt.Fprintln(w, "\nPipeline\tExecution ID\t")
+		table := tablewriter.SetupTable([]string{"Pipeline", "Execution ID"})
 		for id, name := range executionIds {
-			fmt.Fprintf(w, "%s\t%s\n", name, id)
+			table.Append([]string{
+				name,
+				id,
+			})
 		}
-		w.Flush()
+		table.Render()
+
 	} else if strings.EqualFold(s, "no") {
 		fmt.Println("Cancelled.")
 		// exit?

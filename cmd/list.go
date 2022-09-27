@@ -2,11 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"text/tabwriter"
 	"time"
 
-	"github.com/shreyasrama/cph/cmd/awsutil"
+	"github.com/shreyasrama/cph/pkg/awsutil"
+	"github.com/shreyasrama/cph/pkg/tablewriter"
 
 	"github.com/aws/aws-sdk-go/service/codepipeline"
 	"github.com/fatih/color"
@@ -74,9 +73,8 @@ func listPipelines(searchTerm string) error {
 	}
 
 	// Print output in readable format
-	// TODO: replace with https://github.com/olekukonko/tablewriter to use colours better and fix formatting
-	w := tabwriter.NewWriter(os.Stdout, 1, 1, 4, ' ', 0)
-	fmt.Fprintln(w, "Name\tLatest State\tLast Update")
+	table := tablewriter.SetupTable([]string{"Name", "Latest State", "Last Update", "Revision"})
+
 	for _, pipeline := range pipeline_status {
 		loc, err := time.LoadLocation("Local")
 		if err != nil {
@@ -88,14 +86,16 @@ func listPipelines(searchTerm string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t",
+
+		table.Append([]string{
 			pipeline.PipelineName,
 			getStatusColor(pipeline.PipelineExecSummary, stageInfo.StageName),
 			date,
-		)
-		fmt.Fprintln(w)
+			*pipeline.PipelineExecSummary.SourceRevisions[0].RevisionSummary,
+		})
 	}
-	w.Flush()
+
+	table.Render()
 
 	return nil
 }

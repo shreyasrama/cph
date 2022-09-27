@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shreyasrama/cph/cmd/awsutil"
+	"github.com/shreyasrama/cph/pkg/awsutil"
 
 	"github.com/spf13/cobra"
 )
@@ -93,7 +93,7 @@ Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
 		}
 		fmt.Printf("Approved %s\n", pipeline_map[i]) //
 	} else if strings.EqualFold(s, "yes") {
-		fmt.Println("Running pipelines...")
+		fmt.Println("Approving pipelines...")
 		err := awsutil.ApprovePipelines(cp, stagesToApprove)
 		if err != nil {
 			return err
