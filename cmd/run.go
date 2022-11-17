@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -91,6 +92,14 @@ Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
 		fmt.Println("Cancelled.")
 		// exit?
 	} else {
+		// User provided a range
+		match, err := regexp.MatchString("^[0-9]{1,2}-[0-9]{1,2}$", s)
+		if err != nil {
+			return err
+		}
+		if match {
+			inputhelper.
+		}
 		fmt.Println("Input not recognised.")
 		// exit?
 	}
