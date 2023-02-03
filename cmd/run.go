@@ -6,9 +6,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/service/codepipeline"
 	"github.com/shreyasrama/cph/pkg/awsutil"
-	"github.com/shreyasrama/cph/pkg/tablewriter"
+	"github.com/shreyasrama/cph/pkg/helpers"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -59,50 +61,94 @@ func runPipelines(searchTerm string) error {
 		pipeline_map[i+1] = pipeline
 		fmt.Printf("    [%v] %s\n", i+1, pipeline)
 	}
+
+	executionTable := helpers.SetupTable([]string{"Pipeline", "Execution ID"})
+
 	var s string
 	fmt.Printf(
 		"\n%s",
 		`Do you want to run these pipelines?
 Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
 	fmt.Scan(&s)
-	// Check if number is entered
+
+	// User enters a single number
 	if i, err := strconv.Atoi(s); err == nil {
 		executionId, err := awsutil.RunPipeline(cp, pipeline_map[i])
 		if err != nil {
 			return err
 		}
 		fmt.Printf("Started execution of %s. Execution ID: %s", pipeline_map[i], executionId)
+
 	} else if strings.EqualFold(s, "yes") {
+		// Run pipelines and set up table output
 		fmt.Println("Running pipelines...")
 		executionIds, err := awsutil.RunPipelines(cp, pipeline_names)
 		if err != nil {
 			return err
 		}
-
-		table := tablewriter.SetupTable([]string{"Pipeline", "Execution ID"})
-		for id, name := range executionIds {
-			table.Append([]string{
-				name,
-				id,
-			})
-		}
-		table.Render()
+		renderExecutionTable(executionIds, executionTable)
 
 	} else if strings.EqualFold(s, "no") {
 		fmt.Println("Cancelled.")
 		// exit?
-	} else {
-		// User provided a range
-		match, err := regexp.MatchString("^[0-9]{1,2}-[0-9]{1,2}$", s)
+
+	} else { // User enters a range
+		rangeMatch, _ := regexp.MatchString("^[0-9]{1,2}-[0-9]{1,2}$", s) // e.g. 1-3, 2-6
+		selectionMatch, _ := regexp.MatchString(`^\d+(?:, *\d+)*$`, s)    // e.g. 1,3,5
+
+		if rangeMatch {
+			fmt.Println("Range entered")
+			pipelinesToRun, err := helpers.ValidateInputRange(s, len(pipeline_names))
+			if err != nil {
+				return err
+			}
+
+			// Run pipelines and set up table output
+			runMultiInputPipelines(pipelinesToRun, cp, pipeline_map, executionTable)
+
+		} else if selectionMatch {
+			fmt.Println("Selection entered")
+			pipelinesToRun, err := helpers.ValidateInputSelection(s, len(pipeline_names))
+			if err != nil {
+				return err
+			}
+
+			// Run pipelines and set up table
+			runMultiInputPipelines(pipelinesToRun, cp, pipeline_map, executionTable)
+
+		} else {
+			fmt.Println("Input not recognised.")
+			// exit?
+		}
+	}
+
+	return nil
+}
+
+func renderExecutionTable(executionIds map[string]string, executionTable *tablewriter.Table) {
+	for id, name := range executionIds {
+		executionTable.Append([]string{
+			name,
+			id,
+		})
+	}
+	executionTable.Render()
+}
+
+// For range and selection inputs
+func runMultiInputPipelines(pipelinesToRun []int, cp *codepipeline.CodePipeline, pipelineMap map[int]string, executionTable *tablewriter.Table) error {
+	fmt.Println("Running pipelines...")
+	executionIds := make(map[string]string)
+
+	for i := range pipelinesToRun {
+		executionId, err := awsutil.RunPipeline(cp, pipelineMap[pipelinesToRun[i]])
 		if err != nil {
 			return err
 		}
-		if match {
-			inputhelper.
-		}
-		fmt.Println("Input not recognised.")
-		// exit?
+		executionIds[executionId] = pipelineMap[pipelinesToRun[i]]
 	}
+
+	renderExecutionTable(executionIds, executionTable)
 
 	return nil
 }

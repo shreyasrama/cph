@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/shreyasrama/cph/pkg/awsutil"
-	"github.com/shreyasrama/cph/pkg/tablewriter"
+	"github.com/shreyasrama/cph/pkg/helpers"
 
 	"github.com/aws/aws-sdk-go/service/codepipeline"
 	"github.com/fatih/color"
@@ -73,7 +73,7 @@ func listPipelines(searchTerm string) error {
 	}
 
 	// Print output in readable format
-	table := tablewriter.SetupTable([]string{"Name", "Latest State", "Last Update", "Revision"})
+	table := helpers.SetupTable([]string{"Name", "Latest State", "Last Update", "Revision"})
 
 	for _, pipeline := range pipeline_status {
 		loc, err := time.LoadLocation("Local")

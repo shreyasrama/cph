@@ -9,7 +9,7 @@ import (
 )
 
 // Processes the user's input if it's a range
-func ValidateInputRange(userRange string, pipelineCount int) ([]string, error) {
+func ValidateInputRange(userRange string, pipelineCount int) ([]int, error) {
 	// Ensure range is within number of pipelines retrieved
 	s := strings.Split(userRange, "-")
 	min, _ := strconv.Atoi(s[0])
@@ -20,18 +20,15 @@ func ValidateInputRange(userRange string, pipelineCount int) ([]string, error) {
 		return nil, errors.New("range provided is larger than number of pipelines retrieved")
 	}
 
-	// TODO: expand range out (1-5 becomes array of 1,2,3,4,5) or use range keyword?
-	return s, nil
-
-	return nil, err
+	return createNumbers(min, max), nil
 }
 
 // Processes the user's input if it's a selection
-func ValidateInputSelection(userSelection string, pipelineCount int) ([]string, error) {
+func ValidateInputSelection(userSelection string, pipelineCount int) ([]int, error) {
 	// Ensure user provided selection is valid (1,2,3 or 1, 2, 3)
 	match, err := regexp.MatchString(`(\d+)(,\s*\d+)*`, userSelection)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("selection format is invalid, must be '1,2,3' or '1, 2, 3'")
 	}
 
 	if match {
@@ -40,13 +37,31 @@ func ValidateInputSelection(userSelection string, pipelineCount int) ([]string, 
 		s := strings.Split(userSelection, ",")
 		sort.Strings(s)
 		min, _ := strconv.Atoi(s[0])
-		max, _ := strconv.Atoi(s[len(s)])
+		max, _ := strconv.Atoi(s[len(s)-1])
 		if min > pipelineCount || max > pipelineCount {
 			return nil, errors.New("specified range is out of bounds")
 		}
 
-		return s, nil
+		// Create int array
+		intArray := make([]int, len(s))
+		for i := range s {
+			val, _ := strconv.Atoi(s[i])
+			intArray[i] = val
+		}
+
+		return intArray, nil
 	}
 
 	return nil, err
+}
+
+// Takes the min and max and returns a number array
+func createNumbers(min int, max int) []int {
+	numbers := make([]int, max-min+1)
+
+	for i := range numbers {
+		numbers[i] = i + min
+	}
+
+	return numbers
 }
