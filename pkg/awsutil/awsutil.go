@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/codepipeline"
+	"github.com/aws/aws-sdk-go/service/sts"
 )
 
 type pipelineExecSummary struct {
@@ -152,14 +153,21 @@ func GetLatestPipelineExecution(client *codepipeline.CodePipeline, pipelineName 
 	return *result.PipelineExecutionSummaries[0], nil
 }
 
-func ApprovePipelines(client *codepipeline.CodePipeline, stagesToApprove map[string]StageInfo) error {
-	for name, info := range stagesToApprove {
+func ApprovePipelines(client *codepipeline.CodePipeline, stagesToPutStatus map[string]StageInfo, approvalStatus string) error {
+	svc := sts.New(session.Must(session.NewSession()))
+	input := &sts.GetCallerIdentityInput{}
+	callerIdentity, err := svc.GetCallerIdentity(input)
+
+	if err != nil {
+		fmt.Println("Error getting user: ", err)
+	}
+	for name, info := range stagesToPutStatus {
 		_, err := client.PutApprovalResult(&codepipeline.PutApprovalResultInput{
 			ActionName:   &info.ActionName,
 			PipelineName: &name,
 			Result: &codepipeline.ApprovalResult{
-				Status:  aws.String(codepipeline.ApprovalStatusApproved),
-				Summary: aws.String("Approved"),
+				Status:  aws.String(approvalStatus),
+				Summary: aws.String("Approved/Rejected with CPH by " + callerIdentity.String()),
 			},
 			StageName: &info.StageName,
 			Token:     info.Token,
