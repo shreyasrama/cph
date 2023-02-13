@@ -81,7 +81,7 @@ func approvePipelines(searchTerm string) error {
 	fmt.Printf(
 		"\n%s",
 		`Do you want to approve these pipelines?
-Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
+Enter 'yes' to run all, 'no' to cancel, 'reject' to reject or a number for a specific pipeline: `)
 	fmt.Scan(&s)
 	// Check if number is entered
 	if i, err := strconv.Atoi(s); err == nil {
