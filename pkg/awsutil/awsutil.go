@@ -165,7 +165,7 @@ func ApprovePipelines(client *codepipeline.CodePipeline, stagesToPutStatus map[s
 			PipelineName: &name,
 			Result: &codepipeline.ApprovalResult{
 				Status:  aws.String(approvalStatus),
-				Summary: aws.String(approvalStatus + " with CPH by " + callerIdentity.String()),
+				Summary: aws.String(approvalStatus + " with CPH by " + *callerIdentity.String()),
 			},
 			StageName: &info.StageName,
 			Token:     info.Token,
@@ -184,7 +184,7 @@ func GetSession() (*session.Session, error) {
 		Profile:           os.Getenv("AWS_PROFILE"),
 	})
 	if err != nil {
-		fmt.Println("Error creating Session:", err)
+		fmt.Println("Error creating Session: ", err)
 		return nil, err
 	}
 	return sess, err
