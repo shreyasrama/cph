@@ -26,16 +26,14 @@ type StageInfo struct {
 
 // Create an AWS Session with a Code Pipeline client
 func CreateCodePipelineSession() (*codepipeline.CodePipeline, error) {
-	sess, err := session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable, // Must be set to enable
-		Profile:           os.Getenv("AWS_PROFILE"),
-	})
-	if err != nil {
-		fmt.Println("Error creating CodePipeline session:", err)
-		return nil, err
-	}
+	sess, err := GetSession()
+	return codepipeline.New(sess), err
+}
 
-	return codepipeline.New(sess), nil
+// Create an AWS Session with an STS client
+func CreateSTSSession() (*sts.STS, error) {
+	sess, err := GetSession()
+	return sts.New(sess), err
 }
 
 // Given a serch term, return a slice of pipeline names
@@ -154,7 +152,7 @@ func GetLatestPipelineExecution(client *codepipeline.CodePipeline, pipelineName 
 }
 
 func ApprovePipelines(client *codepipeline.CodePipeline, stagesToPutStatus map[string]StageInfo, approvalStatus string) error {
-	svc := sts.New(session.Must(session.NewSession()))
+	svc, err := CreateSTSSession()
 	input := &sts.GetCallerIdentityInput{}
 	callerIdentity, err := svc.GetCallerIdentity(input)
 
@@ -167,7 +165,7 @@ func ApprovePipelines(client *codepipeline.CodePipeline, stagesToPutStatus map[s
 			PipelineName: &name,
 			Result: &codepipeline.ApprovalResult{
 				Status:  aws.String(approvalStatus),
-				Summary: aws.String("Approved/Rejected with CPH by " + callerIdentity.String()),
+				Summary: aws.String(approvalStatus + " with CPH by " + callerIdentity.String()),
 			},
 			StageName: &info.StageName,
 			Token:     info.Token,
@@ -179,3 +177,16 @@ func ApprovePipelines(client *codepipeline.CodePipeline, stagesToPutStatus map[s
 
 	return nil
 }
+
+func GetSession() (*session.Session, error) {
+	sess, err := session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable, // Must be set to enable
+		Profile:           os.Getenv("AWS_PROFILE"),
+	})
+	if err != nil {
+		fmt.Println("Error creating Session:", err)
+		return nil, err
+	}
+	return sess, err
+}
+
