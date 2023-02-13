@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/service/codepipeline"
 	"github.com/shreyasrama/cph/pkg/awsutil"
-
 	"github.com/spf13/cobra"
 )
 
@@ -81,20 +81,20 @@ func approvePipelines(searchTerm string) error {
 	fmt.Printf(
 		"\n%s",
 		`Do you want to approve these pipelines?
-Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
+Enter 'yes' to run all, 'no' to cancel, 'reject' to reject or a number for a specific pipeline: `)
 	fmt.Scan(&s)
 	// Check if number is entered
 	if i, err := strconv.Atoi(s); err == nil {
 		stageToApprove := make(map[string]awsutil.StageInfo)
 		stageToApprove[pipelineMap[i]] = stagesToApprove[pipelineMap[i]]
-		err := awsutil.ApprovePipelines(cp, stageToApprove)
+		err := awsutil.ApprovePipelines(cp, stageToApprove, codepipeline.ApprovalStatusApproved)
 		if err != nil {
 			return err
 		}
 		fmt.Printf("Approved %s\n", pipelineMap[i])
 	} else if strings.EqualFold(s, "yes") {
 		fmt.Println("Approving pipelines...")
-		err := awsutil.ApprovePipelines(cp, stagesToApprove)
+		err := awsutil.ApprovePipelines(cp, stagesToApprove, codepipeline.ApprovalStatusApproved)
 		if err != nil {
 			return err
 		}
@@ -105,6 +105,16 @@ Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
 	} else if strings.EqualFold(s, "no") {
 		fmt.Println("Cancelled.")
 		// exit?
+	} else if strings.EqualFold(s, "reject") {
+		fmt.Println("Rejecting pipelines...")
+		err := awsutil.ApprovePipelines(cp, stagesToApprove, codepipeline.ApprovalStatusRejected)
+		if err != nil {
+			return err
+		}
+
+		for name := range stagesToApprove {
+			fmt.Printf("Rejected %s\n", name)
+		}
 	} else {
 		fmt.Println("Input not recognised.")
 		// exit?
