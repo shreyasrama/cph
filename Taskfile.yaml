@@ -8,8 +8,8 @@ tasks:
   snapshot:
     desc: Uses goreleaser to create a snapshot of artifacts - doesn't upload artifacts anywhere
     cmds:
-    - goreleaser release --snapshot --skip-publish --rm-dist
+    - goreleaser release --snapshot --skip-publish --clean
   release:
     desc: Uses goreleaser to release and upload artifacts
     cmds:
-    - goreleaser release --rm-dist
+    - goreleaser release --clean
