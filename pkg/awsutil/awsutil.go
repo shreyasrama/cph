@@ -12,11 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 )
 
-type pipelineExecSummary struct {
-	PipelineName        string
-	PipelineExecSummary codepipeline.PipelineExecutionSummary
-}
-
 type StageInfo struct {
 	ActionName string
 	StageName  string
@@ -153,19 +148,23 @@ func GetLatestPipelineExecution(client *codepipeline.CodePipeline, pipelineName 
 
 func ApprovePipelines(client *codepipeline.CodePipeline, stagesToPutStatus map[string]StageInfo, approvalStatus string) error {
 	svc, err := CreateSTSSession()
+	if err != nil {
+		fmt.Println("Error creating session: ", err)
+	}
+
 	input := &sts.GetCallerIdentityInput{}
 	callerIdentity, err := svc.GetCallerIdentity(input)
-
 	if err != nil {
 		fmt.Println("Error getting user: ", err)
 	}
+
 	for name, info := range stagesToPutStatus {
 		_, err := client.PutApprovalResult(&codepipeline.PutApprovalResultInput{
 			ActionName:   &info.ActionName,
 			PipelineName: &name,
 			Result: &codepipeline.ApprovalResult{
 				Status:  aws.String(approvalStatus),
-				Summary: aws.String(approvalStatus + " with CPH by " + *callerIdentity.String()),
+				Summary: aws.String(approvalStatus + " with CPH by " + callerIdentity.String()),
 			},
 			StageName: &info.StageName,
 			Token:     info.Token,
@@ -189,4 +188,3 @@ func GetSession() (*session.Session, error) {
 	}
 	return sess, err
 }
-
