@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/service/codepipeline"
 	"github.com/shreyasrama/cph/pkg/awsutil"
-
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +45,7 @@ func approvePipelines(searchTerm string) error {
 		return err
 	}
 
-	pipeline_names, err := awsutil.GetPipelineNames(cp, searchTerm)
+	pipelineNames, err := awsutil.GetPipelineNames(cp, searchTerm)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func approvePipelines(searchTerm string) error {
 	// Iterate over pipeline names and get the most recent pipeline
 	// execution status and create a slice of structs
 	stagesToApprove := make(map[string]awsutil.StageInfo)
-	for _, name := range pipeline_names {
+	for _, name := range pipelineNames {
 		stageInfo, err := awsutil.GetLastExecutedStage(cp, name)
 		if err != nil {
 			return err
@@ -69,11 +69,11 @@ func approvePipelines(searchTerm string) error {
 	}
 
 	// Print and confirm pipelines to be approved
-	pipeline_map := make(map[int]string)
+	pipelineMap := make(map[int]string)
 	fmt.Printf("\n%s\n", "The following pipelines have been found:")
 	i := 0
 	for pipeline := range stagesToApprove {
-		pipeline_map[i+1] = pipeline
+		pipelineMap[i+1] = pipeline
 		fmt.Printf("    [%v] %s (%s)\n", i+1, pipeline, stagesToApprove[pipeline].StageName)
 		i++
 	}
@@ -81,20 +81,20 @@ func approvePipelines(searchTerm string) error {
 	fmt.Printf(
 		"\n%s",
 		`Do you want to approve these pipelines?
-Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
+Enter 'yes' to run all, 'no' to cancel, 'reject' to reject or a number for a specific pipeline: `)
 	fmt.Scan(&s)
 	// Check if number is entered
 	if i, err := strconv.Atoi(s); err == nil {
 		stageToApprove := make(map[string]awsutil.StageInfo)
-		stageToApprove[pipeline_map[i]] = stagesToApprove[pipeline_map[i]]
-		err := awsutil.ApprovePipelines(cp, stageToApprove)
+		stageToApprove[pipelineMap[i]] = stagesToApprove[pipelineMap[i]]
+		err := awsutil.ApprovePipelines(cp, stageToApprove, codepipeline.ApprovalStatusApproved)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Approved %s\n", pipeline_map[i]) //
+		fmt.Printf("Approved %s\n", pipelineMap[i])
 	} else if strings.EqualFold(s, "yes") {
 		fmt.Println("Approving pipelines...")
-		err := awsutil.ApprovePipelines(cp, stagesToApprove)
+		err := awsutil.ApprovePipelines(cp, stagesToApprove, codepipeline.ApprovalStatusApproved)
 		if err != nil {
 			return err
 		}
@@ -105,6 +105,16 @@ Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
 	} else if strings.EqualFold(s, "no") {
 		fmt.Println("Cancelled.")
 		// exit?
+	} else if strings.EqualFold(s, "reject") {
+		fmt.Println("Rejecting pipelines...")
+		err := awsutil.ApprovePipelines(cp, stagesToApprove, codepipeline.ApprovalStatusRejected)
+		if err != nil {
+			return err
+		}
+
+		for name := range stagesToApprove {
+			fmt.Printf("Rejected %s\n", name)
+		}
 	} else {
 		fmt.Println("Input not recognised.")
 		// exit?

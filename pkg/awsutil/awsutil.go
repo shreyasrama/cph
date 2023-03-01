@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/codepipeline"
+	"github.com/aws/aws-sdk-go/service/sts"
 )
 
 type pipelineExecSummary struct {
@@ -25,16 +26,14 @@ type StageInfo struct {
 
 // Create an AWS Session with a Code Pipeline client
 func CreateCodePipelineSession() (*codepipeline.CodePipeline, error) {
-	sess, err := session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable, // Must be set to enable
-		Profile:           os.Getenv("AWS_PROFILE"),
-	})
-	if err != nil {
-		fmt.Println("Error creating CodePipeline session:", err)
-		return nil, err
-	}
+	sess, err := GetSession()
+	return codepipeline.New(sess), err
+}
 
-	return codepipeline.New(sess), nil
+// Create an AWS Session with an STS client
+func CreateSTSSession() (*sts.STS, error) {
+	sess, err := GetSession()
+	return sts.New(sess), err
 }
 
 // Given a serch term, return a slice of pipeline names
@@ -152,14 +151,21 @@ func GetLatestPipelineExecution(client *codepipeline.CodePipeline, pipelineName 
 	return *result.PipelineExecutionSummaries[0], nil
 }
 
-func ApprovePipelines(client *codepipeline.CodePipeline, stagesToApprove map[string]StageInfo) error {
-	for name, info := range stagesToApprove {
+func ApprovePipelines(client *codepipeline.CodePipeline, stagesToPutStatus map[string]StageInfo, approvalStatus string) error {
+	svc, err := CreateSTSSession()
+	input := &sts.GetCallerIdentityInput{}
+	callerIdentity, err := svc.GetCallerIdentity(input)
+
+	if err != nil {
+		fmt.Println("Error getting user: ", err)
+	}
+	for name, info := range stagesToPutStatus {
 		_, err := client.PutApprovalResult(&codepipeline.PutApprovalResultInput{
 			ActionName:   &info.ActionName,
 			PipelineName: &name,
 			Result: &codepipeline.ApprovalResult{
-				Status:  aws.String(codepipeline.ApprovalStatusApproved),
-				Summary: aws.String("Approved"),
+				Status:  aws.String(approvalStatus),
+				Summary: aws.String(approvalStatus + " with CPH by " + *callerIdentity.String()),
 			},
 			StageName: &info.StageName,
 			Token:     info.Token,
@@ -171,3 +177,16 @@ func ApprovePipelines(client *codepipeline.CodePipeline, stagesToApprove map[str
 
 	return nil
 }
+
+func GetSession() (*session.Session, error) {
+	sess, err := session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable, // Must be set to enable
+		Profile:           os.Getenv("AWS_PROFILE"),
+	})
+	if err != nil {
+		fmt.Println("Error creating Session: ", err)
+		return nil, err
+	}
+	return sess, err
+}
+
