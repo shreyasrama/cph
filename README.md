@@ -19,13 +19,21 @@ cph approve --name pipeline_name
 
     `git clone https://github.com/shreyasrama/cph.git`
 
+1. Change directories:
+
+    `cd cph`
+
 1. Build a binary:
 
     `go build -mod=mod -o bin/cph main.go`
 
+1. Move to PATH:
+
+    `sudo mv bin/cph /usr/local/bin`
+
 1. Test it out:
 
-    `bin/cph`
+    `cph`
 
 ### Taskfile
 Task (https://taskfile.dev/) is a simple build tool used to help automate some tasks with `cph`.
@@ -39,3 +47,4 @@ Task (https://taskfile.dev/) is a simple build tool used to help automate some t
 - Several more functions (not in order of importance): get approvals and multi approve, detailed view of a single pipeline
 - ~~Setting up releases in Github and releasing via Taskfile~~ `done`
 - ~~Use https://github.com/olekukonko/tablewriter instead of tabwriter~~ `done`
+- Investigate if there are useful GH Actions that can be added for CI

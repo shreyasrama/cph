@@ -49,16 +49,16 @@ func runPipelines(searchTerm string) error {
 		return err
 	}
 
-	pipeline_names, err := awsutil.GetPipelineNames(cp, searchTerm)
+	pipelineNames, err := awsutil.GetPipelineNames(cp, searchTerm)
 	if err != nil {
 		return err
 	}
 
 	// Print and confirm pipelines to be run
-	pipeline_map := make(map[int]string)
+	pipelineMap := make(map[int]string)
 	fmt.Printf("\n%s\n", "The following pipelines have been found:")
-	for i, pipeline := range pipeline_names {
-		pipeline_map[i+1] = pipeline
+	for i, pipeline := range pipelineNames {
+		pipelineMap[i+1] = pipeline
 		fmt.Printf("    [%v] %s\n", i+1, pipeline)
 	}
 
@@ -73,16 +73,15 @@ Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
 
 	// User enters a single number
 	if i, err := strconv.Atoi(s); err == nil {
-		executionId, err := awsutil.RunPipeline(cp, pipeline_map[i])
+		executionId, err := awsutil.RunPipeline(cp, pipelineMap[i])
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Started execution of %s. Execution ID: %s", pipeline_map[i], executionId)
-
+		fmt.Printf("Started execution of %s. Execution ID: %s", pipelineMap[i], executionId)
 	} else if strings.EqualFold(s, "yes") {
 		// Run pipelines and set up table output
 		fmt.Println("Running pipelines...")
-		executionIds, err := awsutil.RunPipelines(cp, pipeline_names)
+		executionIds, err := awsutil.RunPipelines(cp, pipelineNames)
 		if err != nil {
 			return err
 		}
@@ -98,23 +97,23 @@ Enter 'yes' to run all, 'no' to cancel, or a number for a specific pipeline: `)
 
 		if rangeMatch {
 			fmt.Println("Range entered")
-			pipelinesToRun, err := helpers.ValidateInputRange(s, len(pipeline_names))
+			pipelinesToRun, err := helpers.ValidateInputRange(s, len(pipelineNames))
 			if err != nil {
 				return err
 			}
 
 			// Run pipelines and set up table output
-			runMultiInputPipelines(pipelinesToRun, cp, pipeline_map, executionTable)
+			runMultiInputPipelines(pipelinesToRun, cp, pipelineMap, executionTable)
 
 		} else if selectionMatch {
 			fmt.Println("Selection entered")
-			pipelinesToRun, err := helpers.ValidateInputSelection(s, len(pipeline_names))
+			pipelinesToRun, err := helpers.ValidateInputSelection(s, len(pipelineNames))
 			if err != nil {
 				return err
 			}
 
 			// Run pipelines and set up table
-			runMultiInputPipelines(pipelinesToRun, cp, pipeline_map, executionTable)
+			runMultiInputPipelines(pipelinesToRun, cp, pipelineMap, executionTable)
 
 		} else {
 			fmt.Println("Input not recognised.")
