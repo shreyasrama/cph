@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/shreyasrama/cph/pkg/awsutil"
-	"github.com/shreyasrama/cph/pkg/helpers"
-
 	"github.com/aws/aws-sdk-go/service/codepipeline"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+
+	"github.com/shreyasrama/cph/pkg/awsutil"
+	"github.com/shreyasrama/cph/pkg/helpers"
 )
 
 var listCmd = &cobra.Command{

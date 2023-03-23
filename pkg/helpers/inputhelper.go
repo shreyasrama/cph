@@ -2,14 +2,13 @@ package helpers
 
 import (
 	"errors"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 )
 
 // Processes the user's input if it's a range
-func ValidateInputRange(userRange string, pipelineCount int) ([]int, error) {
+func ProcessInputRange(userRange string, pipelineCount int) ([]int, error) {
 	// Ensure range is within number of pipelines retrieved
 	s := strings.Split(userRange, "-")
 	min, _ := strconv.Atoi(s[0])
@@ -24,35 +23,25 @@ func ValidateInputRange(userRange string, pipelineCount int) ([]int, error) {
 }
 
 // Processes the user's input if it's a selection
-func ValidateInputSelection(userSelection string, pipelineCount int) ([]int, error) {
-	// Ensure user provided selection is valid (1,2,3 or 1, 2, 3)
-	match, err := regexp.MatchString(`(\d+)(,\s*\d+)*`, userSelection)
-	if err != nil {
-		return nil, errors.New("selection format is invalid, must be '1,2,3' or '1, 2, 3'")
+func ProcessInputSelection(userSelection string, pipelineCount int) ([]int, error) {
+	// Ensure lower and upper values are within number of pipelines retrieved
+	userSelection = strings.ReplaceAll(userSelection, " ", "")
+	s := strings.Split(userSelection, ",")
+	sort.Strings(s)
+	min, _ := strconv.Atoi(s[0])
+	max, _ := strconv.Atoi(s[len(s)-1])
+	if min > pipelineCount || max > pipelineCount {
+		return nil, errors.New("specified range is out of bounds")
 	}
 
-	if match {
-		// Ensure lower and upper values are within number of pipelines retrieved
-		userSelection = strings.ReplaceAll(userSelection, " ", "")
-		s := strings.Split(userSelection, ",")
-		sort.Strings(s)
-		min, _ := strconv.Atoi(s[0])
-		max, _ := strconv.Atoi(s[len(s)-1])
-		if min > pipelineCount || max > pipelineCount {
-			return nil, errors.New("specified range is out of bounds")
-		}
-
-		// Create int array
-		intArray := make([]int, len(s))
-		for i := range s {
-			val, _ := strconv.Atoi(s[i])
-			intArray[i] = val
-		}
-
-		return intArray, nil
+	// Create int array
+	intArray := make([]int, len(s))
+	for i := range s {
+		val, _ := strconv.Atoi(s[i])
+		intArray[i] = val
 	}
 
-	return nil, err
+	return intArray, nil
 }
 
 // Takes the min and max and returns a number array
