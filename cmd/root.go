@@ -1,7 +1,3 @@
-/*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
-*/
 package cmd
 
 import (
@@ -10,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var version = "0.0.0"
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "cph",
@@ -17,6 +15,7 @@ var rootCmd = &cobra.Command{
 	Long: `CLI tool written in Go, that interacts with AWS CodePipeline
 and provides useful commands to view the statuses of all your pipelines.
 `,
+	Version: version,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
