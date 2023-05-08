@@ -9,6 +9,8 @@ builds:
       - linux
     goarch:
       - amd64
+    ldflags:
+      - -X github.com/shreyasrama/cph/cmd.version={{ .Version }}
 archives:
   - id: main
     name_template: >- # example: cph_0.2.0_linux_x86_64.tar.gz
