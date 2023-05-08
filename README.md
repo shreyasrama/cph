@@ -48,3 +48,4 @@ Task (https://taskfile.dev/) is a simple build tool used to help automate some t
 - ~~Setting up releases in Github and releasing via Taskfile~~ `done`
 - ~~Use https://github.com/olekukonko/tablewriter instead of tabwriter~~ `done`
 - Investigate if there are useful GH Actions that can be added for CI
+- Add search by tag
