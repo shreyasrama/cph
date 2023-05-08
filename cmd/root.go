@@ -12,8 +12,8 @@ var version = "0.0.0"
 var rootCmd = &cobra.Command{
 	Use:   "cph",
 	Short: "CLI tool to interact with AWS CodePipeline",
-	Long: `CLI tool written in Go, that interacts with AWS CodePipeline
-and provides useful commands to view the statuses of all your pipelines.
+	Long: `CLI tool written in Go, that provides useful commands to interact with
+your resources in AWS CodePipeline.
 `,
 	Version: version,
 	// Uncomment the following line if your bare application
