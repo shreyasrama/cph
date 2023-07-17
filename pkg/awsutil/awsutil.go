@@ -31,11 +31,11 @@ func CreateSTSSession() (*sts.STS, error) {
 	return sts.New(sess), err
 }
 
-// Given a serch term, return a slice of pipeline names
+// Given a search term, return a slice of pipeline names
 func GetPipelineNames(client *codepipeline.CodePipeline, searchTerm string) ([]string, error) {
 	// List all pipelines
 	params := &codepipeline.ListPipelinesInput{
-		MaxResults: aws.Int64(300),
+		MaxResults: aws.Int64(1000),
 	}
 	result, err := client.ListPipelines(params)
 	if err != nil {
