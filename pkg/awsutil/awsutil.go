@@ -146,7 +146,8 @@ func GetLatestPipelineExecution(client *codepipeline.CodePipeline, pipelineName 
 	return *result.PipelineExecutionSummaries[0], nil
 }
 
-func ApprovePipelines(client *codepipeline.CodePipeline, stagesToPutStatus map[string]StageInfo, approvalStatus string) error {
+func ApprovePipelines(client *codepipeline.CodePipeline, stagesToPutStatus map[string]StageInfo, approvalStatus string, message string) error {
+
 	svc, err := CreateSTSSession()
 	if err != nil {
 		fmt.Println("Error creating session: ", err)
@@ -158,13 +159,19 @@ func ApprovePipelines(client *codepipeline.CodePipeline, stagesToPutStatus map[s
 		fmt.Println("Error getting user: ", err)
 	}
 
+	// Build the Summary Message
+	summary := approvalStatus + " with CPH by " + callerIdentity.String()
+	if len(message) > 0 {
+		summary += ".\n Message: " + message
+	}
+
 	for name, info := range stagesToPutStatus {
 		_, err := client.PutApprovalResult(&codepipeline.PutApprovalResultInput{
 			ActionName:   &info.ActionName,
 			PipelineName: &name,
 			Result: &codepipeline.ApprovalResult{
 				Status:  aws.String(approvalStatus),
-				Summary: aws.String(approvalStatus + " with CPH by " + callerIdentity.String()),
+				Summary: aws.String(summary),
 			},
 			StageName: &info.StageName,
 			Token:     info.Token,

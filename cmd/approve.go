@@ -22,10 +22,12 @@ var approveCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
+			fmt.Println("You must pass in a --name flag when approving pipelines.")
 			return err
 		}
+		message, _ := cmd.Flags().GetString("message")
 
-		return approvePipelines(name)
+		return approvePipelines(name, message)
 	},
 }
 
@@ -37,10 +39,7 @@ func init() {
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	approveCmd.PersistentFlags().String("name", "", "Use a name or part of a name to filter the runnable pipelines.")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// runCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	approveCmd.PersistentFlags().String("message", "", "Add a message for the approval action")
 	// TODO: add pipeline flag?
 }
 
@@ -49,7 +48,7 @@ func init() {
 // pipelineNames []string - names of the pipeline that the search returned.
 // pipelineMap (map[int]string) - maps the number the pipeline corresponds to in the search results to its name.
 // executionTable (var) - table that presents the output from the run command.
-func approvePipelines(searchTerm string) error {
+func approvePipelines(searchTerm string, message string) error {
 	cp, err := awsutil.CreateCodePipelineSession()
 	if err != nil {
 		return err
@@ -90,6 +89,7 @@ func approvePipelines(searchTerm string) error {
 	}
 
 	var s string
+
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Printf(
 		"\n%s",
@@ -98,11 +98,23 @@ Enter 'yes' to approve all, 'no' to cancel, 'reject' to reject all, a number for
 	if scanner.Scan() {
 		s = scanner.Text()
 	}
+	if len(message) > 0 {
+		scanner = bufio.NewScanner(os.Stdin)
+		if scanner.Scan() {
+			message = scanner.Text()
+		}
+		fmt.Printf(
+			"\n%s",
+			`Do you want to add a message? E.g. A Change Order number. This will apply for all pipelines.`)
+		if scanner.Scan() {
+			s = scanner.Text()
+		}
+	}
 
 	if i, err := strconv.Atoi(s); err == nil { // User enters a single number
 		stageToApprove := make(map[string]awsutil.StageInfo)
 		stageToApprove[pipelineMap[i]] = stagesToApprove[pipelineMap[i]]
-		err := awsutil.ApprovePipelines(cp, stageToApprove, codepipeline.ApprovalStatusApproved)
+		err := awsutil.ApprovePipelines(cp, stageToApprove, codepipeline.ApprovalStatusApproved, message)
 		if err != nil {
 			return err
 		}
@@ -110,7 +122,7 @@ Enter 'yes' to approve all, 'no' to cancel, 'reject' to reject all, a number for
 
 	} else if strings.EqualFold(s, "yes") {
 		fmt.Println("Approving pipelines...")
-		err := awsutil.ApprovePipelines(cp, stagesToApprove, codepipeline.ApprovalStatusApproved)
+		err := awsutil.ApprovePipelines(cp, stagesToApprove, codepipeline.ApprovalStatusApproved, message)
 		if err != nil {
 			return err
 		}
@@ -125,7 +137,7 @@ Enter 'yes' to approve all, 'no' to cancel, 'reject' to reject all, a number for
 
 	} else if strings.EqualFold(s, "reject") {
 		fmt.Println("Rejecting pipelines...")
-		err := awsutil.ApprovePipelines(cp, stagesToApprove, codepipeline.ApprovalStatusRejected)
+		err := awsutil.ApprovePipelines(cp, stagesToApprove, codepipeline.ApprovalStatusRejected, message)
 		if err != nil {
 			return err
 		}
@@ -149,7 +161,7 @@ Enter 'yes' to approve all, 'no' to cancel, 'reject' to reject all, a number for
 				approveStages[pipelineMap[pipelinesToApprove[i]]] = stagesToApprove[pipelineMap[pipelinesToApprove[i]]]
 			}
 
-			approveMultiInputPipelines(cp, approveStages, pipelineMap)
+			approveMultiInputPipelines(cp, approveStages, pipelineMap, message)
 
 		} else if selectionMatch {
 			pipelinesToApprove, err := helpers.ProcessInputSelection(s, len(pipelineNames))
@@ -163,7 +175,7 @@ Enter 'yes' to approve all, 'no' to cancel, 'reject' to reject all, a number for
 				approveStages[pipelineMap[pipelinesToApprove[i]]] = stagesToApprove[pipelineMap[pipelinesToApprove[i]]]
 			}
 
-			approveMultiInputPipelines(cp, approveStages, pipelineMap)
+			approveMultiInputPipelines(cp, approveStages, pipelineMap, message)
 
 		} else {
 			fmt.Println("Input not recognised.")
@@ -176,9 +188,9 @@ Enter 'yes' to approve all, 'no' to cancel, 'reject' to reject all, a number for
 
 // For range and selection inputs.
 // Takes map of pipeline names -> their approval stage to approve the appropriate pipelines
-func approveMultiInputPipelines(cp *codepipeline.CodePipeline, stagesToApprove map[string]awsutil.StageInfo, pipelineMap map[int]string) error {
+func approveMultiInputPipelines(cp *codepipeline.CodePipeline, stagesToApprove map[string]awsutil.StageInfo, pipelineMap map[int]string, message string) error {
 	fmt.Println("Approving pipelines...")
-	err := awsutil.ApprovePipelines(cp, stagesToApprove, codepipeline.ApprovalStatusApproved)
+	err := awsutil.ApprovePipelines(cp, stagesToApprove, codepipeline.ApprovalStatusApproved, message)
 	if err != nil {
 		return err
 	}
