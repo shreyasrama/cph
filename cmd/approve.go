@@ -98,16 +98,13 @@ Enter 'yes' to approve all, 'no' to cancel, 'reject' to reject all, a number for
 	if scanner.Scan() {
 		s = scanner.Text()
 	}
-	if len(message) > 0 {
+	if len(message) == 0 {
 		scanner = bufio.NewScanner(os.Stdin)
-		if scanner.Scan() {
-			message = scanner.Text()
-		}
 		fmt.Printf(
 			"\n%s",
 			`Do you want to add a message? E.g. A Change Order number. This will apply for all pipelines.`)
 		if scanner.Scan() {
-			s = scanner.Text()
+			message = scanner.Text()
 		}
 	}
 
