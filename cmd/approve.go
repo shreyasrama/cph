@@ -1,199 +1,197 @@
-package cmd
+package awsutil
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"regexp"
-	"strconv"
 	"strings"
+	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/codepipeline"
-	"github.com/spf13/cobra"
-
-	"github.com/shreyasrama/cph/pkg/awsutil"
-	"github.com/shreyasrama/cph/pkg/helpers"
+	"github.com/aws/aws-sdk-go/service/sts"
 )
 
-// approveCmd represents the approve command
-var approveCmd = &cobra.Command{
-	Use:   "approve",
-	Short: "Approve CodePipelines based on a provided search term.",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		name, err := cmd.Flags().GetString("name")
-		if err != nil {
-			fmt.Println("You must pass in a --name flag when approving pipelines.")
-			return err
-		}
-		message, _ := cmd.Flags().GetString("message")
-
-		return approvePipelines(name, message)
-	},
+type StageInfo struct {
+	ActionName string
+	StageName  string
+	Status     string
+	Token      *string
 }
 
-func init() {
-	rootCmd.AddCommand(approveCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	approveCmd.PersistentFlags().String("name", "", "Use a name or part of a name to filter the runnable pipelines.")
-	approveCmd.PersistentFlags().String("message", "", "Add a message for the approval action")
-	// TODO: add pipeline flag?
+// Create an AWS Session with a Code Pipeline client
+func CreateCodePipelineSession() (*codepipeline.CodePipeline, error) {
+	sess, err := GetSession()
+	return codepipeline.New(sess), err
 }
 
-// Core logic for the approve feature.
-// Notable data structures/variables:
-// pipelineNames []string - names of the pipeline that the search returned.
-// pipelineMap (map[int]string) - maps the number the pipeline corresponds to in the search results to its name.
-// executionTable (var) - table that presents the output from the run command.
-func approvePipelines(searchTerm string, message string) error {
-	cp, err := awsutil.CreateCodePipelineSession()
+// Create an AWS Session with an STS client
+func CreateSTSSession() (*sts.STS, error) {
+	sess, err := GetSession()
+	return sts.New(sess), err
+}
+
+// Given a search term, return a slice of pipeline names
+func GetPipelineNames(client *codepipeline.CodePipeline, searchTerm string) ([]string, error) {
+	// List all pipelines
+	params := &codepipeline.ListPipelinesInput{
+		MaxResults: aws.Int64(1000),
+	}
+	result, err := client.ListPipelines(params)
 	if err != nil {
-		return err
+		fmt.Println("Error listing pipelines: ", err)
+		return nil, err
 	}
 
-	pipelineNames, err := awsutil.GetPipelineNames(cp, searchTerm)
-	if err != nil {
-		return err
-	}
-
-	// Iterate over pipeline names and get the most recent pipeline
-	// execution status and create a map of names to StageInfo
-	stagesToApprove := make(map[string]awsutil.StageInfo)
-	for _, name := range pipelineNames {
-		stageInfo, err := awsutil.GetLastExecutedStage(cp, name)
-		if err != nil {
-			return err
-		}
-		if stageInfo.Status == "InProgress" {
-			stagesToApprove[name] = stageInfo
-		}
-	}
-
-	if len(stagesToApprove) == 0 {
-		fmt.Println("No pipelines to approve.")
-		return nil
-	}
-
-	// Print and confirm pipelines to be approved
-	pipelineMap := make(map[int]string)
-	fmt.Printf("\n%s\n", "The following pipelines have been found:")
-	i := 0
-	// TODO: executionTable?
-	for pipeline := range stagesToApprove {
-		pipelineMap[i+1] = pipeline
-		fmt.Printf("    [%v] %s (%s)\n", i+1, pipeline, stagesToApprove[pipeline].StageName)
-		i++
-	}
-
-	var s string
-
-	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Printf(
-		"\n%s",
-		`Do you want to approve these pipelines?
-Enter 'yes' to approve all, 'no' to cancel, 'reject' to reject all, a number for a specific pipeline, or provide a range or list: `)
-	if scanner.Scan() {
-		s = scanner.Text()
-	}
-	if len(message) == 0 {
-		scanner = bufio.NewScanner(os.Stdin)
-		fmt.Printf(
-			"\n%s",
-			`Do you want to add a message? E.g. A Change Order number. This will apply for all pipelines.`)
-		if scanner.Scan() {
-			message = scanner.Text()
-		}
-	}
-
-	if i, err := strconv.Atoi(s); err == nil { // User enters a single number
-		stageToApprove := make(map[string]awsutil.StageInfo)
-		stageToApprove[pipelineMap[i]] = stagesToApprove[pipelineMap[i]]
-		err := awsutil.ApprovePipelines(cp, stageToApprove, codepipeline.ApprovalStatusApproved, message)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("Approved %s\n", pipelineMap[i])
-
-	} else if strings.EqualFold(s, "yes") {
-		fmt.Println("Approving pipelines...")
-		err := awsutil.ApprovePipelines(cp, stagesToApprove, codepipeline.ApprovalStatusApproved, message)
-		if err != nil {
-			return err
-		}
-
-		for name := range stagesToApprove {
-			fmt.Printf("Approved %s\n", name)
-		}
-
-	} else if strings.EqualFold(s, "no") {
-		fmt.Println("Cancelled.")
-		// exit?
-
-	} else if strings.EqualFold(s, "reject") {
-		fmt.Println("Rejecting pipelines...")
-		err := awsutil.ApprovePipelines(cp, stagesToApprove, codepipeline.ApprovalStatusRejected, message)
-		if err != nil {
-			return err
-		}
-
-		for name := range stagesToApprove {
-			fmt.Printf("Rejected %s\n", name)
-		}
-	} else { // User enters a range
-		rangeMatch, _ := regexp.MatchString("^[0-9]{1,2}-[0-9]{1,2}$", s) // e.g. 1-3, 2-6
-		selectionMatch, _ := regexp.MatchString(`(\d+)(,\s*\d+)*`, s)     // e.g. 1,3,5
-
-		if rangeMatch {
-			pipelinesToApprove, err := helpers.ProcessInputRange(s, len(pipelineNames))
-			if err != nil {
-				return err
+	// Iterate over pipelines and create a slice of names
+	var pipeline_names []string
+	for _, p := range result.Pipelines {
+		if searchTerm != "" {
+			if strings.Contains(*p.Name, searchTerm) {
+				pipeline_names = append(pipeline_names, *p.Name)
 			}
-
-			// Approve pipelines
-			approveStages := make(map[string]awsutil.StageInfo)
-			for i := range pipelinesToApprove {
-				approveStages[pipelineMap[pipelinesToApprove[i]]] = stagesToApprove[pipelineMap[pipelinesToApprove[i]]]
-			}
-
-			approveMultiInputPipelines(cp, approveStages, pipelineMap, message)
-
-		} else if selectionMatch {
-			pipelinesToApprove, err := helpers.ProcessInputSelection(s, len(pipelineNames))
-			if err != nil {
-				return err
-			}
-
-			// Approve pipelines
-			approveStages := make(map[string]awsutil.StageInfo)
-			for i := range pipelinesToApprove {
-				approveStages[pipelineMap[pipelinesToApprove[i]]] = stagesToApprove[pipelineMap[pipelinesToApprove[i]]]
-			}
-
-			approveMultiInputPipelines(cp, approveStages, pipelineMap, message)
-
 		} else {
-			fmt.Println("Input not recognised.")
-			// exit?
+			pipeline_names = append(pipeline_names, *p.Name)
+		}
+	}
+
+	return pipeline_names, nil
+}
+
+// Given a pipeline name, run that pipeline
+func RunPipeline(client *codepipeline.CodePipeline, pipelineName string) (string, error) {
+	// Start pipeline execution
+	params := &codepipeline.StartPipelineExecutionInput{
+		Name: aws.String(pipelineName),
+	}
+	result, err := client.StartPipelineExecution(params)
+	if err != nil {
+		fmt.Println("Error starting pipeline execution: ", err)
+		return "", err
+	}
+
+	return *result.PipelineExecutionId, nil
+}
+
+// Given pipeline names, run those pipelines
+func RunPipelines(client *codepipeline.CodePipeline, pipelineNames []string) (map[string]string, error) {
+	// Start pipeline execution
+	m := make(map[string]string)
+	for _, p := range pipelineNames {
+		executionId, err := RunPipeline(client, p)
+		if err != nil {
+			return nil, err
+		}
+		m[executionId] = p
+	}
+
+	return m, nil
+}
+
+// Given a pipeline name, return the stage that was last executed
+func GetLastExecutedStage(client *codepipeline.CodePipeline, pipelineName string) (StageInfo, error) {
+	// Get the pipeline state
+	params := &codepipeline.GetPipelineStateInput{
+		Name: aws.String(pipelineName),
+	}
+	result, err := client.GetPipelineState(params)
+	if err != nil {
+		fmt.Println("Error retrieving pipeline state: ", err)
+	}
+
+	// Iterate over pipeline stage states.
+	// InProgress or Failed means that the pipeline is currently at that given stage.
+	var stageInfo StageInfo
+	lastStatusChange := time.Date(1970, time.Month(1), 1, 1, 1, 1, 1, time.UTC)
+	for _, p := range result.StageStates {
+		if p.ActionStates[0].LatestExecution != nil {
+			switch *p.ActionStates[0].LatestExecution.Status {
+			case "InProgress", "Failed":
+				return StageInfo{
+					*p.ActionStates[0].ActionName,
+					*p.StageName,
+					*p.ActionStates[0].LatestExecution.Status,
+					p.ActionStates[0].LatestExecution.Token,
+				}, nil
+			default:
+				currentStatusChange := *p.ActionStates[0].LatestExecution.LastStatusChange
+				if currentStatusChange.After(lastStatusChange) {
+					lastStatusChange = currentStatusChange
+					stageInfo = StageInfo{
+						*p.ActionStates[0].ActionName,
+						*p.StageName,
+						*p.ActionStates[0].LatestExecution.Status,
+						p.ActionStates[0].LatestExecution.Token,
+					}
+				}
+			}
+		}
+	}
+
+	return stageInfo, nil
+}
+
+func GetLatestPipelineExecution(client *codepipeline.CodePipeline, pipelineName string) (codepipeline.PipelineExecutionSummary, error) {
+	// Get one (the latest) pipeline execution
+	params := &codepipeline.ListPipelineExecutionsInput{
+		MaxResults:   aws.Int64(1),
+		PipelineName: aws.String(pipelineName),
+	}
+	result, err := client.ListPipelineExecutions(params)
+	if err != nil {
+		fmt.Println("Error listing pipeline executions: ", err)
+		return codepipeline.PipelineExecutionSummary{}, err
+	}
+
+	return *result.PipelineExecutionSummaries[0], nil
+}
+
+func ApprovePipelines(client *codepipeline.CodePipeline, stagesToPutStatus map[string]StageInfo, approvalStatus string, message string) error {
+
+	svc, err := CreateSTSSession()
+	if err != nil {
+		fmt.Println("Error creating session: ", err)
+	}
+
+	input := &sts.GetCallerIdentityInput{}
+	callerIdentity, err := svc.GetCallerIdentity(input)
+	if err != nil {
+		fmt.Println("Error getting user: ", err)
+	}
+
+	// Build the Summary Message
+	summary := approvalStatus + " with CPH by " + *callerIdentity.UserId + "."
+	if len(message) > 0 {
+		summary += "&nbsp; \n\n Message: " + message
+	}
+
+	for name, info := range stagesToPutStatus {
+		_, err := client.PutApprovalResult(&codepipeline.PutApprovalResultInput{
+			ActionName:   &info.ActionName,
+			PipelineName: &name,
+			Result: &codepipeline.ApprovalResult{
+				Status:  aws.String(approvalStatus),
+				Summary: aws.String(summary),
+			},
+			StageName: &info.StageName,
+			Token:     info.Token,
+		})
+		if err != nil {
+			fmt.Println("Error putting approval result: ", err)
 		}
 	}
 
 	return nil
 }
 
-// For range and selection inputs.
-// Takes map of pipeline names -> their approval stage to approve the appropriate pipelines
-func approveMultiInputPipelines(cp *codepipeline.CodePipeline, stagesToApprove map[string]awsutil.StageInfo, pipelineMap map[int]string, message string) error {
-	fmt.Println("Approving pipelines...")
-	err := awsutil.ApprovePipelines(cp, stagesToApprove, codepipeline.ApprovalStatusApproved, message)
+func GetSession() (*session.Session, error) {
+	sess, err := session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable, // Must be set to enable
+		Profile:           os.Getenv("AWS_PROFILE"),
+	})
 	if err != nil {
-		return err
+		fmt.Println("Error creating Session: ", err)
+		return nil, err
 	}
-	for name := range stagesToApprove {
-		fmt.Printf("Approved %s\n", name)
-	}
-
-	return nil
+	return sess, err
 }
