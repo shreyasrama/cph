@@ -160,9 +160,9 @@ func ApprovePipelines(client *codepipeline.CodePipeline, stagesToPutStatus map[s
 	}
 
 	// Build the Summary Message
-	summary := approvalStatus + " with CPH by " + callerIdentity.String()
+	summary := approvalStatus + " with CPH by " + *callerIdentity.UserId + "."
 	if len(message) > 0 {
-		summary += ".\n Message: " + message
+		summary += "&nbsp; \n\n Message: " + message
 	}
 
 	for name, info := range stagesToPutStatus {
