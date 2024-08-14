@@ -14,7 +14,7 @@ cph approve --name pipeline_name
 ```
 
 ## Installation
-go install github.com/shreyasrama/cph@latest
+`go install github.com/shreyasrama/cph@latest`
 
 ### Taskfile
 Task (https://taskfile.dev/) is a simple build tool used to help automate some tasks with `cph`.
