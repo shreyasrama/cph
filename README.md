@@ -16,6 +16,30 @@ cph approve --name pipeline_name
 ## Installation
 `go install github.com/shreyasrama/cph@latest`
 
+or
+
+(Temporary)
+1. Clone the repo:
+
+    `git clone https://github.com/shreyasrama/cph.git`
+
+1. Change directories:
+
+    `cd cph`
+
+1. Build a binary:
+
+    `go build -mod=mod -o bin/cph main.go`
+
+1. Move to PATH:
+
+    `sudo mv bin/cph /usr/local/bin`
+
+1. Test it out:
+
+    `cph`
+
+
 ### Taskfile
 Task (https://taskfile.dev/) is a simple build tool used to help automate some tasks with `cph`.
 
