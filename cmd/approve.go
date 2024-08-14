@@ -102,7 +102,7 @@ Enter 'yes' to approve all, 'no' to cancel, 'reject' to reject all, a number for
 		scanner = bufio.NewScanner(os.Stdin)
 		fmt.Printf(
 			"\n%s",
-			`Do you want to add a message? E.g. A Change Order number or rejection reason. This will apply for all pipelines: `)
+			`Would you like to add a message? E.g. a ticket number or rejection reason. This will apply for all pipelines: `)
 		if scanner.Scan() {
 			message = scanner.Text()
 		}
