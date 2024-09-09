@@ -13,7 +13,11 @@ cph run --name pipeline_name
 cph approve --name pipeline_name
 ```
 
-## Installation/Development
+## Installation
+`go install github.com/shreyasrama/cph@latest`
+
+or
+
 (Temporary)
 1. Clone the repo:
 
@@ -34,6 +38,7 @@ cph approve --name pipeline_name
 1. Test it out:
 
     `cph`
+
 
 ### Taskfile
 Task (https://taskfile.dev/) is a simple build tool used to help automate some tasks with `cph`.
