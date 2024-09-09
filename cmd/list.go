@@ -17,12 +17,8 @@ var listCmd = &cobra.Command{
 	Short: "List AWS CodePipelines you have access to.",
 	Run: func(cmd *cobra.Command, args []string) {
 		name, _ := cmd.Flags().GetString("name")
-
-		if name != "" {
-			listPipelines(name)
-		} else {
-			listPipelines("")
-		}
+		// GetString returns "" if invalid/null so just pass through
+		listPipelines(name)
 	},
 }
 
@@ -34,10 +30,6 @@ func init() {
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	listCmd.PersistentFlags().String("name", "", "Use a name or part of a name to filter the listed pipelines.")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 type pipelineExecSummary struct {
